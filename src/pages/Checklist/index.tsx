@@ -6,8 +6,9 @@ import { useVersionStore } from '@/stores/versionStore';
 import { useUserStore } from '@/stores/userStore';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ChecklistGroup } from '@/components/ChecklistGroup';
-import type { ChecklistItem, ChecklistCategory } from '@/types';
+import type { ChecklistItem, ChecklistCategory, TimelineEvent } from '@/types';
 import { CHECKLIST_CATEGORY_LABELS } from '@/types';
+import { generateId } from '@/utils/date';
 
 export function ChecklistPage() {
   const { id } = useParams();
@@ -17,11 +18,15 @@ export function ChecklistPage() {
   const getChecklist = useVersionStore((state) => state.getChecklist);
   const updateChecklist = useVersionStore((state) => state.updateChecklist);
   const updateStatus = useVersionStore((state) => state.updateStatus);
+  const updateVersion = useVersionStore((state) => state.updateVersion);
+  const addReleaseRecord = useVersionStore((state) => state.addReleaseRecord);
+  const getTestingReport = useVersionStore((state) => state.getTestingReport);
   
   const currentUser = useUserStore((state) => state.currentUser);
 
   const version = id ? getVersion(id) : null;
   const checklist = id ? getChecklist(id) : null;
+  const testingReport = id ? getTestingReport(id) : null;
 
   const [items, setItems] = useState<ChecklistItem[]>([]);
 
@@ -63,8 +68,60 @@ export function ChecklistPage() {
   };
 
   const handleRelease = () => {
-    if (allCompleted && currentUser.role === 'dev' || currentUser.role === 'admin') {
-      updateStatus(id!, 'released');
+    if (allCompleted && (currentUser.role === 'dev' || currentUser.role === 'admin')) {
+      const now = new Date().toISOString();
+      
+      const timeline: TimelineEvent[] = [
+        {
+          id: generateId(),
+          time: now,
+          title: '开始发布',
+          description: `开始部署版本 ${version.versionNumber}`,
+          user: currentUser.name,
+        },
+        {
+          id: generateId(),
+          time: now,
+          title: '部署完成',
+          description: '所有服务部署完成',
+          user: currentUser.name,
+        },
+        {
+          id: generateId(),
+          time: now,
+          title: '验证通过',
+          description: '功能验证通过',
+          user: testingReport?.signOff?.user || currentUser.name,
+        },
+        {
+          id: generateId(),
+          time: now,
+          title: '发布完成',
+          description: '发布成功，通知相关人员',
+          user: currentUser.name,
+        },
+      ];
+
+      const participants = [
+        version.owner,
+        testingReport?.signOff?.user || '',
+        currentUser.name,
+      ].filter(Boolean);
+
+      addReleaseRecord({
+        versionId: id!,
+        timeline,
+        participants,
+        result: 'success',
+        reviewConclusion: '',
+        releasedAt: now,
+      });
+
+      updateVersion(id!, {
+        status: 'released',
+        actualDate: now.split('T')[0],
+      });
+
       navigate(`/records`);
     }
   };

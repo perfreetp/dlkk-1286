@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Link, ExternalLink } from 'lucide-react';
+import { Search, Filter, Plus, Link, ExternalLink, X, Save } from 'lucide-react';
 import clsx from 'clsx';
 import { useRequirementStore } from '@/stores/requirementStore';
 import { useVersionStore } from '@/stores/versionStore';
+import { useUserStore } from '@/stores/userStore';
 import { PriorityBadge } from '@/components/PriorityBadge';
-import { StatusBadge } from '@/components/StatusBadge';
 import { formatDate } from '@/utils/date';
 import type { Requirement, RequirementStatus, Priority } from '@/types';
 import { REQUIREMENT_STATUS_LABELS, PRIORITY_LABELS } from '@/types';
@@ -14,10 +14,19 @@ export function Requirements() {
   const navigate = useNavigate();
   const requirements = useRequirementStore((state) => state.requirements);
   const versions = useVersionStore((state) => state.versions);
+  const createRequirement = useRequirementStore((state) => state.createRequirement);
+  const currentUser = useUserStore((state) => state.currentUser);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequirementStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newRequirement, setNewRequirement] = useState({
+    title: '',
+    description: '',
+    priority: 'p2' as Priority,
+    owner: currentUser.name,
+  });
 
   const filteredRequirements = requirements.filter((req) => {
     const matchesSearch = req.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -38,14 +47,124 @@ export function Requirements() {
     done: requirements.filter((r) => r.status === 'done').length,
   };
 
+  const handleCreateRequirement = () => {
+    if (newRequirement.title) {
+      createRequirement({
+        title: newRequirement.title,
+        description: newRequirement.description,
+        priority: newRequirement.priority,
+        owner: newRequirement.owner,
+        status: 'pending',
+      });
+      setNewRequirement({
+        title: '',
+        description: '',
+        priority: 'p2',
+        owner: currentUser.name,
+      });
+      setShowCreateForm(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-800">需求清单</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-500">共 {requirements.length} 条需求</span>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            <Plus size={18} />
+            新建需求
+          </button>
         </div>
       </div>
+
+      {showCreateForm && (
+        <div className="bg-white rounded-lg border border-orange-300 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-slate-800">新建需求</h3>
+            <button
+              onClick={() => setShowCreateForm(false)}
+              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              <X size={20} className="text-slate-400" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">需求标题</label>
+              <input
+                type="text"
+                value={newRequirement.title}
+                onChange={(e) => setNewRequirement({ ...newRequirement, title: e.target.value })}
+                placeholder="输入需求标题..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">需求描述</label>
+              <textarea
+                value={newRequirement.description}
+                onChange={(e) => setNewRequirement({ ...newRequirement, description: e.target.value })}
+                placeholder="详细描述需求内容..."
+                rows={3}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400 resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">优先级</label>
+                <select
+                  value={newRequirement.priority}
+                  onChange={(e) => setNewRequirement({ ...newRequirement, priority: e.target.value as Priority })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400"
+                >
+                  {Object.entries(PRIORITY_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">负责人</label>
+                <input
+                  type="text"
+                  value={newRequirement.owner}
+                  onChange={(e) => setNewRequirement({ ...newRequirement, owner: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-4">
+              <button
+                onClick={handleCreateRequirement}
+                disabled={!newRequirement.title}
+                className={clsx(
+                  'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
+                  newRequirement.title
+                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                )}
+              >
+                <Save size={18} />
+                保存
+              </button>
+              <button
+                onClick={() => setShowCreateForm(false)}
+                className="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-slate-200 p-4">
         <div className="flex items-center gap-4 mb-4">

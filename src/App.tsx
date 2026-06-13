@@ -4,7 +4,9 @@ import { Calendar } from '@/pages/Calendar';
 import { Release } from '@/pages/Release';
 import { Requirements } from '@/pages/Requirements';
 import { Testing } from '@/pages/Testing';
+import { TestingSelect } from '@/pages/Testing/SelectVersion';
 import { ChecklistPage } from '@/pages/Checklist';
+import { ChecklistSelect } from '@/pages/Checklist/SelectVersion';
 import { Records } from '@/pages/Records';
 
 export default function App() {
@@ -17,7 +19,9 @@ export default function App() {
           <Route path="release" element={<Release />} />
           <Route path="release/:id" element={<Release />} />
           <Route path="requirements" element={<Requirements />} />
+          <Route path="testing" element={<TestingSelect />} />
           <Route path="testing/:id" element={<Testing />} />
+          <Route path="checklist" element={<ChecklistSelect />} />
           <Route path="checklist/:id" element={<ChecklistPage />} />
           <Route path="records" element={<Records />} />
         </Route>

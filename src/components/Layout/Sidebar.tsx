@@ -8,9 +8,12 @@ import {
   History,
   ChevronLeft,
   ChevronRight,
+  Users,
 } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
+import { useUserStore } from '@/stores/userStore';
+import { USER_ROLE_LABELS } from '@/types';
 
 const navItems = [
   { path: '/calendar', label: '版本日历', icon: Calendar },
@@ -23,6 +26,10 @@ const navItems = [
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
+  const currentUser = useUserStore((state) => state.currentUser);
+  const users = useUserStore((state) => state.users);
+  const setCurrentUser = useUserStore((state) => state.setCurrentUser);
 
   return (
     <aside
@@ -67,9 +74,58 @@ export function Sidebar() {
       {!collapsed && (
         <div className="absolute bottom-4 left-4 right-4">
           <div className="p-3 bg-slate-800 rounded-lg">
-            <p className="text-xs text-slate-400">当前用户</p>
-            <p className="text-sm font-medium text-white mt-1">陈发布</p>
-            <p className="text-xs text-slate-500">发布管理员</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-slate-400">当前用户</p>
+              <button
+                onClick={() => setShowRoleSelector(!showRoleSelector)}
+                className="p-1 rounded hover:bg-slate-700 transition-colors"
+                title="切换角色"
+              >
+                <Users size={14} className="text-orange-400" />
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-8 h-8 rounded-full bg-slate-200"
+              />
+              <div>
+                <p className="text-sm font-medium text-white">{currentUser.name}</p>
+                <p className="text-xs text-orange-400">{USER_ROLE_LABELS[currentUser.role]}</p>
+              </div>
+            </div>
+
+            {showRoleSelector && (
+              <div className="mt-3 pt-3 border-t border-slate-700 space-y-1">
+                <p className="text-xs text-slate-500 mb-2">切换角色</p>
+                {users.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => {
+                      setCurrentUser(user);
+                      setShowRoleSelector(false);
+                    }}
+                    className={clsx(
+                      'w-full flex items-center gap-2 p-2 rounded transition-colors',
+                      currentUser.id === user.id
+                        ? 'bg-orange-500/20 text-orange-400'
+                        : 'hover:bg-slate-700 text-slate-300'
+                    )}
+                  >
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-6 h-6 rounded-full bg-slate-200"
+                    />
+                    <span className="text-sm">{user.name}</span>
+                    <span className="text-xs text-slate-500 ml-auto">
+                      {USER_ROLE_LABELS[user.role]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
