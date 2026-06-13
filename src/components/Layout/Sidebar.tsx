@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import {
+  BarChart3,
   Calendar,
   FileText,
   ListTodo,
@@ -16,6 +17,7 @@ import { useUserStore } from '@/stores/userStore';
 import { USER_ROLE_LABELS } from '@/types';
 
 const navItems = [
+  { path: '/dashboard', label: '流程总览', icon: BarChart3 },
   { path: '/calendar', label: '版本日历', icon: Calendar },
   { path: '/release', label: '发布单', icon: FileText },
   { path: '/requirements', label: '需求清单', icon: ListTodo },

@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, AlertTriangle } from 'lucide-react';
 import { useVersionStore } from '@/stores/versionStore';
-import { useRequirementStore } from '@/stores/requirementStore';
 import { StatusBadge } from '@/components/StatusBadge';
 import { RiskBadge } from '@/components/RiskBadge';
 import { formatDate } from '@/utils/date';
@@ -26,31 +25,37 @@ export function ChecklistSelect() {
 
       {eligibleVersions.length > 0 ? (
         <div className="space-y-3">
-          {eligibleVersions.map((version) => (
-            <button
-              key={version.id}
-              onClick={() => navigate(`/checklist/${version.id}`)}
-              className="w-full flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 hover:border-orange-300 hover:shadow-md transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-slate-800">{version.versionNumber}</span>
-                    <span className="text-slate-600">{version.title}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <span>计划日期: {formatDate(version.plannedDate)}</span>
-                    <span>负责人: {version.owner}</span>
+          {eligibleVersions.map((version) => {
+            const report = testingReports.find((t) => t.versionId === version.id);
+            return (
+              <button
+                key={version.id}
+                onClick={() => navigate(`/checklist/${version.id}`)}
+                className="w-full flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 hover:border-orange-300 hover:shadow-md transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-slate-800">{version.versionNumber}</span>
+                      <span className="text-slate-600">{version.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <span>计划日期: {formatDate(version.plannedDate)}</span>
+                      <span>负责人: {version.owner}</span>
+                      {report?.signOff && (
+                        <span className="text-green-600">✓ 已签字</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <RiskBadge level={version.riskLevel} />
-                <StatusBadge status={version.status} />
-                <ArrowRight size={20} className="text-slate-400" />
-              </div>
-            </button>
-          ))}
+                <div className="flex items-center gap-3">
+                  <RiskBadge level={version.riskLevel} />
+                  <StatusBadge status={version.status} />
+                  <ArrowRight size={20} className="text-slate-400" />
+                </div>
+              </button>
+            );
+          })}
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-slate-200 p-8 text-center">

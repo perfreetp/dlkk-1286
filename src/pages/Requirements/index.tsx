@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Link, ExternalLink, X, Save } from 'lucide-react';
+import { Search, Filter, Plus, Link, ExternalLink, X, Save, ArrowRight } from 'lucide-react';
 import clsx from 'clsx';
 import { useRequirementStore } from '@/stores/requirementStore';
 import { useVersionStore } from '@/stores/versionStore';
@@ -21,6 +21,7 @@ export function Requirements() {
   const [statusFilter, setStatusFilter] = useState<RequirementStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showLinkForm, setShowLinkForm] = useState<string | null>(null);
   const [newRequirement, setNewRequirement] = useState({
     title: '',
     description: '',
@@ -63,6 +64,25 @@ export function Requirements() {
         owner: currentUser.name,
       });
       setShowCreateForm(false);
+    }
+  };
+
+  const linkToVersion = (reqId: string, versionId: string) => {
+    const version = versions.find((v) => v.id === versionId);
+    if (version && !version.requirementIds.includes(reqId)) {
+      useVersionStore.getState().updateVersion(versionId, {
+        requirementIds: [...version.requirementIds, reqId],
+      });
+    }
+    setShowLinkForm(null);
+  };
+
+  const unlinkFromVersion = (reqId: string) => {
+    const version = versions.find((v) => v.requirementIds.includes(reqId));
+    if (version) {
+      useVersionStore.getState().updateVersion(version.id, {
+        requirementIds: version.requirementIds.filter((id) => id !== reqId),
+      });
     }
   };
 
@@ -163,6 +183,46 @@ export function Requirements() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {showLinkForm && (
+        <div className="bg-white rounded-lg border border-blue-300 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-slate-800">关联到版本</h3>
+            <button
+              onClick={() => setShowLinkForm(null)}
+              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              <X size={20} className="text-slate-400" />
+            </button>
+          </div>
+
+          <p className="text-sm text-slate-600 mb-4">
+            选择要关联到的未发布版本：
+          </p>
+
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {versions
+              .filter((v) => v.status !== 'released' && v.status !== 'rolled_back' && v.status !== 'cancelled')
+              .map((version) => (
+                <button
+                  key={version.id}
+                  onClick={() => linkToVersion(showLinkForm, version.id)}
+                  className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-orange-300 hover:bg-orange-50 transition-colors text-left"
+                >
+                  <div>
+                    <p className="font-medium text-slate-800">{version.versionNumber}</p>
+                    <p className="text-xs text-slate-500">{version.title}</p>
+                  </div>
+                  <ArrowRight size={18} className="text-slate-400" />
+                </button>
+              ))}
+          </div>
+
+          {versions.filter((v) => v.status !== 'released' && v.status !== 'rolled_back' && v.status !== 'cancelled').length === 0 && (
+            <p className="text-center text-slate-500 py-4">暂无可关联的版本</p>
+          )}
         </div>
       )}
 
@@ -269,16 +329,31 @@ export function Requirements() {
                     <td className="px-4 py-3 text-sm text-slate-600">{req.owner}</td>
                     <td className="px-4 py-3">
                       {linkedVersion ? (
-                        <button
-                          onClick={() => navigate(`/release/${linkedVersion.id}`)}
-                          className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded text-xs text-blue-600 hover:bg-blue-100 transition-colors"
-                        >
-                          <Link size={12} />
-                          {linkedVersion.versionNumber}
-                          <ExternalLink size={12} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => navigate(`/release/${linkedVersion.id}`)}
+                            className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded text-xs text-blue-600 hover:bg-blue-100 transition-colors"
+                          >
+                            <Link size={12} />
+                            {linkedVersion.versionNumber}
+                            <ExternalLink size={12} />
+                          </button>
+                          <button
+                            onClick={() => unlinkFromVersion(req.id)}
+                            className="p-1 rounded hover:bg-red-100 transition-colors"
+                            title="取消关联"
+                          >
+                            <X size={14} className="text-red-500" />
+                          </button>
+                        </div>
                       ) : (
-                        <span className="text-xs text-slate-400">未关联</span>
+                        <button
+                          onClick={() => setShowLinkForm(req.id)}
+                          className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded text-xs text-slate-600 hover:bg-orange-100 hover:text-orange-600 transition-colors"
+                        >
+                          <Plus size={12} />
+                          关联版本
+                        </button>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-500">{formatDate(req.createdAt)}</td>

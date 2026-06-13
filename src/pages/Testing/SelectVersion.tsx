@@ -8,10 +8,13 @@ import { formatDate } from '@/utils/date';
 export function TestingSelect() {
   const navigate = useNavigate();
   const versions = useVersionStore((state) => state.versions);
+  const testingReports = useVersionStore((state) => state.testingReports);
 
-  const eligibleVersions = versions.filter(
-    (v) => v.status === 'approved' || v.status === 'testing' || v.status === 'ready'
-  );
+  const eligibleVersions = versions.filter((v) => {
+    if (v.status !== 'approved' && v.status !== 'testing') return false;
+    const report = testingReports.find((t) => t.versionId === v.id);
+    return !!report;
+  });
 
   return (
     <div className="space-y-6">
@@ -22,31 +25,37 @@ export function TestingSelect() {
 
       {eligibleVersions.length > 0 ? (
         <div className="space-y-3">
-          {eligibleVersions.map((version) => (
-            <button
-              key={version.id}
-              onClick={() => navigate(`/testing/${version.id}`)}
-              className="w-full flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 hover:border-orange-300 hover:shadow-md transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-slate-800">{version.versionNumber}</span>
-                    <span className="text-slate-600">{version.title}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <span>计划日期: {formatDate(version.plannedDate)}</span>
-                    <span>负责人: {version.owner}</span>
+          {eligibleVersions.map((version) => {
+            const report = testingReports.find((t) => t.versionId === version.id);
+            return (
+              <button
+                key={version.id}
+                onClick={() => navigate(`/testing/${version.id}`)}
+                className="w-full flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 hover:border-orange-300 hover:shadow-md transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-slate-800">{version.versionNumber}</span>
+                      <span className="text-slate-600">{version.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <span>计划日期: {formatDate(version.plannedDate)}</span>
+                      <span>负责人: {version.owner}</span>
+                      {report && (
+                        <span>用例: {report.passedCases}/{report.totalCases}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <RiskBadge level={version.riskLevel} />
-                <StatusBadge status={version.status} />
-                <ArrowRight size={20} className="text-slate-400" />
-              </div>
-            </button>
-          ))}
+                <div className="flex items-center gap-3">
+                  <RiskBadge level={version.riskLevel} />
+                  <StatusBadge status={version.status} />
+                  <ArrowRight size={20} className="text-slate-400" />
+                </div>
+              </button>
+            );
+          })}
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-slate-200 p-8 text-center">
@@ -58,7 +67,7 @@ export function TestingSelect() {
 
       <div className="bg-slate-50 rounded-lg p-4">
         <p className="text-sm text-slate-600">
-          <strong>提示：</strong>只有状态为「审核通过」「测试中」「待发布」的版本才能进行测试准入操作。
+          <strong>提示：</strong>只有状态为「审核通过」或「测试中」且已完成测试报告创建的版本才能进行测试准入操作。
         </p>
       </div>
     </div>

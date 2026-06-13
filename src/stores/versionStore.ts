@@ -22,7 +22,7 @@ interface VersionStore {
   createVersion: (version: Omit<Version, 'id' | 'createdAt' | 'updatedAt'>) => Version;
   updateVersion: (id: string, updates: Partial<Version>) => void;
   deleteVersion: (id: string) => void;
-  updateStatus: (id: string, status: VersionStatus) => void;
+  updateStatus: (id: string, status: VersionStatus, rejectedReason?: string) => void;
   updateTestingReport: (versionId: string, report: Partial<TestingReport>) => void;
   updateChecklist: (versionId: string, items: Partial<Checklist>['items']) => void;
   addApproval: (approval: Omit<Approval, 'id' | 'createdAt'>) => void;
@@ -150,9 +150,14 @@ export const useVersionStore = create<VersionStore>((set, get) => ({
     };
   }),
   
-  updateStatus: (id, status) => set(state => {
+  updateStatus: (id, status, rejectedReason?: string) => set(state => {
     const newVersions = state.versions.map(v => 
-      v.id === id ? { ...v, status, updatedAt: new Date().toISOString() } : v
+      v.id === id ? { 
+        ...v, 
+        status, 
+        rejectedReason: rejectedReason !== undefined ? rejectedReason : v.rejectedReason,
+        updatedAt: new Date().toISOString() 
+      } : v
     );
     saveToStorage('versions', newVersions);
     return { versions: newVersions };

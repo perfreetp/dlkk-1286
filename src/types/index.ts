@@ -33,6 +33,8 @@ export interface Version {
   riskDescription?: string;
   rollbackPlan?: string;
   requirementIds: string[];
+  rejectedReason?: string;
+  attachments: Attachment[];
   createdAt: string;
   updatedAt: string;
 }
