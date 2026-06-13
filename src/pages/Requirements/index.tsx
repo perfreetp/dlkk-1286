@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Link, ExternalLink, X, Save, ArrowRight } from 'lucide-react';
+import { Search, Filter, Plus, Link, ExternalLink, X, Save, ArrowRight, Calendar, CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { useRequirementStore } from '@/stores/requirementStore';
 import { useVersionStore } from '@/stores/versionStore';
 import { useUserStore } from '@/stores/userStore';
 import { PriorityBadge } from '@/components/PriorityBadge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { formatDate } from '@/utils/date';
 import type { Requirement, RequirementStatus, Priority } from '@/types';
-import { REQUIREMENT_STATUS_LABELS, PRIORITY_LABELS } from '@/types';
+import { REQUIREMENT_STATUS_LABELS, PRIORITY_LABELS, STATUS_LABELS } from '@/types';
 
 export function Requirements() {
   const navigate = useNavigate();
   const requirements = useRequirementStore((state) => state.requirements);
   const versions = useVersionStore((state) => state.versions);
+  const testingReports = useVersionStore((state) => state.testingReports);
   const createRequirement = useRequirementStore((state) => state.createRequirement);
   const currentUser = useUserStore((state) => state.currentUser);
 
@@ -38,6 +40,15 @@ export function Requirements() {
 
   const getVersionForRequirement = (reqId: string) => {
     return versions.find((v) => v.requirementIds.includes(reqId) && v.status !== 'cancelled');
+  };
+
+  const getTestingInfo = (versionId: string) => {
+    const report = testingReports.find((t) => t.versionId === versionId);
+    if (!report) return null;
+    return {
+      signOff: report.signOff,
+      passRate: report.totalCases > 0 ? Math.round((report.passedCases / report.totalCases) * 100) : 0,
+    };
   };
 
   const statusCounts = {
@@ -292,14 +303,14 @@ export function Requirements() {
                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">标题</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">优先级</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">负责人</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">关联版本</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">创建时间</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">负责人</th>
               </tr>
             </thead>
             <tbody>
               {filteredRequirements.map((req) => {
                 const linkedVersion = getVersionForRequirement(req.id);
+                const testingInfo = linkedVersion ? getTestingInfo(linkedVersion.id) : null;
                 return (
                   <tr
                     key={req.id}
@@ -326,25 +337,47 @@ export function Requirements() {
                         {REQUIREMENT_STATUS_LABELS[req.status]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{req.owner}</td>
                     <td className="px-4 py-3">
                       {linkedVersion ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => navigate(`/release/${linkedVersion.id}`)}
-                            className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded text-xs text-blue-600 hover:bg-blue-100 transition-colors"
-                          >
-                            <Link size={12} />
-                            {linkedVersion.versionNumber}
-                            <ExternalLink size={12} />
-                          </button>
-                          <button
-                            onClick={() => unlinkFromVersion(req.id)}
-                            className="p-1 rounded hover:bg-red-100 transition-colors"
-                            title="取消关联"
-                          >
-                            <X size={14} className="text-red-500" />
-                          </button>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => navigate(`/release/${linkedVersion.id}`)}
+                              className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded text-xs text-blue-600 hover:bg-blue-100 transition-colors"
+                            >
+                              <Link size={12} />
+                              {linkedVersion.versionNumber}
+                              <ExternalLink size={12} />
+                            </button>
+                            <button
+                              onClick={() => unlinkFromVersion(req.id)}
+                              className="p-1 rounded hover:bg-red-100 transition-colors"
+                              title="取消关联"
+                            >
+                              <X size={14} className="text-red-500" />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <StatusBadge status={linkedVersion.status} size="sm" />
+                            {linkedVersion.plannedDate && (
+                              <span className="flex items-center gap-1 text-slate-500">
+                                <Calendar size={10} />
+                                {formatDate(linkedVersion.plannedDate)}
+                              </span>
+                            )}
+                          </div>
+                          {testingInfo && (
+                            <div className="flex items-center gap-2 text-xs">
+                              {testingInfo.signOff ? (
+                                <span className="flex items-center gap-1 text-green-600">
+                                  <CheckCircle size={10} />
+                                  已签字
+                                </span>
+                              ) : (
+                                <span className="text-yellow-600">待签字</span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <button
@@ -356,7 +389,7 @@ export function Requirements() {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-500">{formatDate(req.createdAt)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{req.owner}</td>
                   </tr>
                 );
               })}

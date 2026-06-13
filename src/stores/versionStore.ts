@@ -27,6 +27,7 @@ interface VersionStore {
   updateChecklist: (versionId: string, items: Partial<Checklist>['items']) => void;
   addApproval: (approval: Omit<Approval, 'id' | 'createdAt'>) => void;
   addReleaseRecord: (record: Omit<ReleaseRecord, 'id'>) => void;
+  updateReleaseRecord: (versionId: string, updates: Partial<ReleaseRecord>) => void;
   checkConflicts: (plannedDate: string) => Version[];
 }
 
@@ -196,6 +197,14 @@ export const useVersionStore = create<VersionStore>((set, get) => ({
       id: generateId(),
     };
     const newReleaseRecords = [...state.releaseRecords, newRecord];
+    saveToStorage('releaseRecords', newReleaseRecords);
+    return { releaseRecords: newReleaseRecords };
+  }),
+
+  updateReleaseRecord: (versionId, updates) => set(state => {
+    const newReleaseRecords = state.releaseRecords.map(r =>
+      r.versionId === versionId ? { ...r, ...updates } : r
+    );
     saveToStorage('releaseRecords', newReleaseRecords);
     return { releaseRecords: newReleaseRecords };
   }),

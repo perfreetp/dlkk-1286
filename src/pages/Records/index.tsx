@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Eye, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { Search, Filter, Eye, CheckCircle2, XCircle, AlertTriangle, Save, Edit, X } from 'lucide-react';
 import clsx from 'clsx';
 import { useVersionStore } from '@/stores/versionStore';
+import { useUserStore } from '@/stores/userStore';
 import { Timeline } from '@/components/Timeline';
 import { StatusBadge } from '@/components/StatusBadge';
 import { RiskBadge } from '@/components/RiskBadge';
@@ -14,10 +15,16 @@ export function Records() {
   const versions = useVersionStore((state) => state.versions);
   const releaseRecords = useVersionStore((state) => state.releaseRecords);
   const getReleaseRecord = useVersionStore((state) => state.getReleaseRecord);
+  const updateReleaseRecord = useVersionStore((state) => state.updateReleaseRecord);
+  const currentUser = useUserStore((state) => state.currentUser);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [resultFilter, setResultFilter] = useState<ReleaseResult | 'all'>('all');
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [editingReview, setEditingReview] = useState(false);
+  const [reviewConclusion, setReviewConclusion] = useState('');
+  const [openIssues, setOpenIssues] = useState('');
+  const [followUpOwner, setFollowUpOwner] = useState('');
 
   const releasedVersions = versions.filter(
     (v) => v.status === 'released' || v.status === 'rolled_back'
@@ -41,6 +48,42 @@ export function Records() {
     success: releasedVersions.filter((v) => getReleaseRecord(v.id)?.result === 'success').length,
     failed: releasedVersions.filter((v) => getReleaseRecord(v.id)?.result === 'failed').length,
     partial: releasedVersions.filter((v) => getReleaseRecord(v.id)?.result === 'partial').length,
+  };
+
+  const handleEditReview = () => {
+    if (selectedRecord) {
+      const parts = selectedRecord.reviewConclusion?.split('\n\n') || [];
+      setReviewConclusion(parts[0] || '');
+      setOpenIssues(parts[1]?.replace('遗留问题：', '') || '');
+      setFollowUpOwner(selectedRecord.followUpOwner || '');
+      setEditingReview(true);
+    }
+  };
+
+  const handleSaveReview = () => {
+    if (selectedVersionId) {
+      const conclusion = [
+        reviewConclusion,
+        openIssues ? `遗留问题：${openIssues}` : '',
+        followUpOwner ? `跟进人：${followUpOwner}` : '',
+      ].filter(Boolean).join('\n\n');
+
+      updateReleaseRecord(selectedVersionId, {
+        reviewConclusion: conclusion,
+        followUpOwner,
+      });
+      setEditingReview(false);
+    }
+  };
+
+  const parseReviewConclusion = (conclusion?: string) => {
+    if (!conclusion) return { main: '', issues: '', owner: '' };
+    const parts = conclusion.split('\n\n');
+    return {
+      main: parts[0] || '',
+      issues: parts[1]?.replace('遗留问题：', '') || '',
+      owner: parts[2]?.replace('跟进人：', '') || '',
+    };
   };
 
   const ResultIcon = ({ result }: { result: ReleaseResult }) => {
@@ -118,7 +161,10 @@ export function Records() {
                 return (
                   <button
                     key={version.id}
-                    onClick={() => setSelectedVersionId(version.id)}
+                    onClick={() => {
+                      setSelectedVersionId(version.id);
+                      setEditingReview(false);
+                    }}
                     className={clsx(
                       'w-full p-4 rounded-lg border transition-colors text-left',
                       selectedVersionId === version.id
@@ -183,12 +229,99 @@ export function Records() {
                   <Timeline events={selectedRecord.timeline} />
                 </div>
 
-                {selectedRecord.reviewConclusion && (
-                  <div className="bg-white rounded-lg border border-slate-200 p-4">
-                    <h3 className="font-medium text-slate-800 mb-2">复盘结论</h3>
-                    <p className="text-sm text-slate-600">{selectedRecord.reviewConclusion}</p>
+                <div className="bg-white rounded-lg border border-slate-200 p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-medium text-slate-800">复盘信息</h3>
+                    {!editingReview && (
+                      <button
+                        onClick={handleEditReview}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                      >
+                        <Edit size={14} />
+                        编辑
+                      </button>
+                    )}
                   </div>
-                )}
+
+                  {editingReview ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">复盘结论</label>
+                        <textarea
+                          value={reviewConclusion}
+                          onChange={(e) => setReviewConclusion(e.target.value)}
+                          placeholder="填写复盘总结..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400 resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">遗留问题</label>
+                        <textarea
+                          value={openIssues}
+                          onChange={(e) => setOpenIssues(e.target.value)}
+                          placeholder="填写遗留问题..."
+                          rows={2}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400 resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">跟进人</label>
+                        <input
+                          type="text"
+                          value={followUpOwner}
+                          onChange={(e) => setFollowUpOwner(e.target.value)}
+                          placeholder="填写跟进负责人..."
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleSaveReview}
+                          className="flex items-center gap-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                        >
+                          <Save size={16} />
+                          保存
+                        </button>
+                        <button
+                          onClick={() => setEditingReview(false)}
+                          className="flex items-center gap-1 px-4 py-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
+                        >
+                          <X size={16} />
+                          取消
+                        </button>
+                      </div>
+                    </div>
+                  ) : selectedRecord.reviewConclusion ? (
+                    (() => {
+                      const parsed = parseReviewConclusion(selectedRecord.reviewConclusion);
+                      return (
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm text-slate-500 mb-1">复盘结论</p>
+                            <p className="text-sm text-slate-700 bg-slate-50 p-2 rounded">{parsed.main || '无'}</p>
+                          </div>
+                          {parsed.issues && (
+                            <div>
+                              <p className="text-sm text-slate-500 mb-1">遗留问题</p>
+                              <p className="text-sm text-slate-700 bg-yellow-50 p-2 rounded">{parsed.issues}</p>
+                            </div>
+                          )}
+                          {parsed.owner && (
+                            <div>
+                              <p className="text-sm text-slate-500 mb-1">跟进人</p>
+                              <p className="text-sm text-slate-700 bg-blue-50 p-2 rounded">{parsed.owner}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <p className="text-sm text-slate-400 text-center py-4">
+                      暂无复盘信息，点击编辑添加
+                    </p>
+                  )}
+                </div>
 
                 <button
                   onClick={() => navigate(`/release/${selectedVersion.id}`)}

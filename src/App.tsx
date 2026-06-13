@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout/Layout';
+import { Workbench } from '@/pages/Workbench';
 import { Dashboard } from '@/pages/Dashboard';
 import { Calendar } from '@/pages/Calendar';
 import { Release } from '@/pages/Release';
@@ -16,7 +17,8 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<Navigate to="/workbench" replace />} />
+          <Route path="workbench" element={<Workbench />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="versions" element={<VersionList />} />
           <Route path="calendar" element={<Calendar />} />

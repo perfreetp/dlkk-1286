@@ -113,6 +113,7 @@ export interface ReleaseRecord {
   participants: string[];
   result: ReleaseResult;
   reviewConclusion?: string;
+  followUpOwner?: string;
   releasedAt: string;
 }
 
