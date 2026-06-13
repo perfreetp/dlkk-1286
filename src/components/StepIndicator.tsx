@@ -12,7 +12,9 @@ interface StepIndicatorProps {
 const steps: VersionStatus[] = ['pending', 'approved', 'testing', 'ready', 'released'];
 
 const statusIcons: Record<VersionStatus, React.ReactNode> = {
+  draft: <Clock size={18} />,
   pending: <Clock size={18} />,
+  rejected: <XCircle size={18} />,
   approved: <CheckCircle2 size={18} />,
   testing: <Circle size={18} />,
   ready: <CheckCircle2 size={18} />,

@@ -25,6 +25,8 @@ export function Testing() {
   const getVersion = useVersionStore((state) => state.getVersion);
   const getTestingReport = useVersionStore((state) => state.getTestingReport);
   const updateTestingReport = useVersionStore((state) => state.updateTestingReport);
+  const updateStatus = useVersionStore((state) => state.updateStatus);
+  const updateVersion = useVersionStore((state) => state.updateVersion);
   
   const currentUser = useUserStore((state) => state.currentUser);
 
@@ -150,22 +152,23 @@ export function Testing() {
 
   const handleSignOff = () => {
     if (currentUser.role === 'test' && formData.blockers.length === 0) {
+      const signOffData = {
+        user: currentUser.name,
+        time: new Date().toISOString(),
+        comment: signOffComment,
+      };
+      
       setFormData((prev) => ({
         ...prev,
-        signOff: {
-          user: currentUser.name,
-          time: new Date().toISOString(),
-          comment: signOffComment,
-        },
+        signOff: signOffData,
       }));
+      
       updateTestingReport(id!, {
         ...formData,
-        signOff: {
-          user: currentUser.name,
-          time: new Date().toISOString(),
-          comment: signOffComment,
-        },
+        signOff: signOffData,
       });
+      
+      updateStatus(id!, 'ready');
     }
   };
 

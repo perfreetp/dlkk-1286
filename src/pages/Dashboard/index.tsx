@@ -20,7 +20,9 @@ export function Dashboard() {
   const versions = useVersionStore((state) => state.versions);
 
   const statusCounts: Record<VersionStatus, number> = {
+    draft: versions.filter((v) => v.status === 'draft').length,
     pending: versions.filter((v) => v.status === 'pending').length,
+    rejected: versions.filter((v) => v.status === 'rejected').length,
     approved: versions.filter((v) => v.status === 'approved').length,
     testing: versions.filter((v) => v.status === 'testing').length,
     ready: versions.filter((v) => v.status === 'ready').length,

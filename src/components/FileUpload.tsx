@@ -26,6 +26,19 @@ export function FileUpload({ attachments, onUpload, onRemove, readOnly = false }
     }
   };
 
+  const handleDownload = (attachment: Attachment) => {
+    if (attachment.url.startsWith('blob:')) {
+      const link = document.createElement('a');
+      link.href = attachment.url;
+      link.download = attachment.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      window.open(attachment.url, '_blank');
+    }
+  };
+
   return (
     <div className="space-y-4">
       {!readOnly && (
@@ -67,6 +80,7 @@ export function FileUpload({ attachments, onUpload, onRemove, readOnly = false }
 
               <div className="flex items-center gap-2">
                 <button
+                  onClick={() => handleDownload(attachment)}
                   className="p-1.5 rounded hover:bg-slate-200 transition-colors"
                   title="下载"
                 >

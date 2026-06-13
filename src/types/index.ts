@@ -1,4 +1,4 @@
-export type VersionStatus = 'pending' | 'approved' | 'testing' | 'ready' | 'released' | 'rolled_back' | 'cancelled';
+export type VersionStatus = 'draft' | 'pending' | 'rejected' | 'approved' | 'testing' | 'ready' | 'released' | 'rolled_back' | 'cancelled';
 export type ReleaseType = 'major' | 'minor' | 'patch' | 'hotfix';
 export type RiskLevel = 'high' | 'medium' | 'low';
 export type ReleaseResult = 'success' | 'failed' | 'partial';
@@ -35,6 +35,12 @@ export interface Version {
   requirementIds: string[];
   rejectedReason?: string;
   attachments: Attachment[];
+  reviewInfo?: {
+    conclusion?: string;
+    openIssues?: string;
+    followUpOwner?: string;
+    updatedAt?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -137,7 +143,9 @@ export interface Approval {
 }
 
 export const STATUS_LABELS: Record<VersionStatus, string> = {
+  draft: '草稿',
   pending: '待审核',
+  rejected: '已驳回',
   approved: '审核通过',
   testing: '测试中',
   ready: '待发布',
@@ -147,7 +155,9 @@ export const STATUS_LABELS: Record<VersionStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<VersionStatus, string> = {
+  draft: 'bg-gray-100 text-gray-800 border-gray-200',
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  rejected: 'bg-red-100 text-red-800 border-red-200',
   approved: 'bg-blue-100 text-blue-800 border-blue-200',
   testing: 'bg-purple-100 text-purple-800 border-purple-200',
   ready: 'bg-green-100 text-green-800 border-green-200',

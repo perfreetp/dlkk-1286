@@ -16,6 +16,7 @@ export function Records() {
   const releaseRecords = useVersionStore((state) => state.releaseRecords);
   const getReleaseRecord = useVersionStore((state) => state.getReleaseRecord);
   const updateReleaseRecord = useVersionStore((state) => state.updateReleaseRecord);
+  const updateVersion = useVersionStore((state) => state.updateVersion);
   const currentUser = useUserStore((state) => state.currentUser);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,6 +73,16 @@ export function Records() {
         reviewConclusion: conclusion,
         followUpOwner,
       });
+      
+      updateVersion(selectedVersionId, {
+        reviewInfo: {
+          conclusion: reviewConclusion,
+          openIssues,
+          followUpOwner,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      
       setEditingReview(false);
     }
   };

@@ -41,16 +41,17 @@ export function Workbench() {
 
     if (role === 'product') {
       versions
-        .filter((v) => v.status === 'pending' || v.rejectedReason)
+        .filter((v) => v.status === 'rejected' || v.status === 'draft')
         .forEach((v) => {
           items.push({
             id: v.id,
-            title: v.rejectedReason ? '版本被驳回，需修改后重新提交' : '待提交的版本',
+            title: v.rejectedReason ? '版本被驳回，需修改后重新提交' : '待完善的版本',
             versionNumber: v.versionNumber,
             versionId: v.id,
             description: v.title,
             priority: 'high',
             type: 'version',
+            rejectedReason: v.rejectedReason,
           });
         });
       versions
