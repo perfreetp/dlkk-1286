@@ -1,0 +1,181 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Plus, Link, ExternalLink } from 'lucide-react';
+import clsx from 'clsx';
+import { useRequirementStore } from '@/stores/requirementStore';
+import { useVersionStore } from '@/stores/versionStore';
+import { PriorityBadge } from '@/components/PriorityBadge';
+import { StatusBadge } from '@/components/StatusBadge';
+import { formatDate } from '@/utils/date';
+import type { Requirement, RequirementStatus, Priority } from '@/types';
+import { REQUIREMENT_STATUS_LABELS, PRIORITY_LABELS } from '@/types';
+
+export function Requirements() {
+  const navigate = useNavigate();
+  const requirements = useRequirementStore((state) => state.requirements);
+  const versions = useVersionStore((state) => state.versions);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<RequirementStatus | 'all'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
+
+  const filteredRequirements = requirements.filter((req) => {
+    const matchesSearch = req.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || req.priority === priorityFilter;
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
+  const getVersionForRequirement = (reqId: string) => {
+    return versions.find((v) => v.requirementIds.includes(reqId) && v.status !== 'cancelled');
+  };
+
+  const statusCounts = {
+    all: requirements.length,
+    pending: requirements.filter((r) => r.status === 'pending').length,
+    developing: requirements.filter((r) => r.status === 'developing').length,
+    testing: requirements.filter((r) => r.status === 'testing').length,
+    done: requirements.filter((r) => r.status === 'done').length,
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-800">需求清单</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-500">共 {requirements.length} 条需求</span>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜索需求..."
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-slate-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as RequirementStatus | 'all')}
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400"
+            >
+              <option value="all">全部状态 ({statusCounts.all})</option>
+              <option value="pending">待处理 ({statusCounts.pending})</option>
+              <option value="developing">开发中 ({statusCounts.developing})</option>
+              <option value="testing">测试中 ({statusCounts.testing})</option>
+              <option value="done">已完成 ({statusCounts.done})</option>
+            </select>
+
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value as Priority | 'all')}
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-orange-400"
+            >
+              <option value="all">全部优先级</option>
+              {Object.entries(PRIORITY_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4 mb-4">
+          {(['pending', 'developing', 'testing', 'done'] as RequirementStatus[]).map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={clsx(
+                'p-4 rounded-lg border transition-colors text-center',
+                statusFilter === status
+                  ? 'bg-orange-50 border-orange-300'
+                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+              )}
+            >
+              <p className="text-2xl font-bold text-slate-800">{statusCounts[status]}</p>
+              <p className="text-sm text-slate-500">{REQUIREMENT_STATUS_LABELS[status]}</p>
+            </button>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">需求ID</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">标题</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">优先级</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">负责人</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">关联版本</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-600">创建时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRequirements.map((req) => {
+                const linkedVersion = getVersionForRequirement(req.id);
+                return (
+                  <tr
+                    key={req.id}
+                    className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-sm text-slate-600">{req.id}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-slate-800">{req.title}</p>
+                      <p className="text-xs text-slate-500 truncate max-w-xs">{req.description}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <PriorityBadge priority={req.priority} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={clsx(
+                          'px-2 py-1 rounded text-xs font-medium',
+                          req.status === 'done' ? 'bg-green-100 text-green-700' :
+                          req.status === 'testing' ? 'bg-purple-100 text-purple-700' :
+                          req.status === 'developing' ? 'bg-blue-100 text-blue-700' :
+                          'bg-gray-100 text-gray-700'
+                        )}
+                      >
+                        {REQUIREMENT_STATUS_LABELS[req.status]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{req.owner}</td>
+                    <td className="px-4 py-3">
+                      {linkedVersion ? (
+                        <button
+                          onClick={() => navigate(`/release/${linkedVersion.id}`)}
+                          className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded text-xs text-blue-600 hover:bg-blue-100 transition-colors"
+                        >
+                          <Link size={12} />
+                          {linkedVersion.versionNumber}
+                          <ExternalLink size={12} />
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400">未关联</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-500">{formatDate(req.createdAt)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredRequirements.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-slate-500">没有找到匹配的需求</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
